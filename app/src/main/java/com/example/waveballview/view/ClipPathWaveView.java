@@ -31,6 +31,7 @@ public class ClipPathWaveView extends View {
 
 
 //    private PorterDuffXfermode mPorterDuffXfermode = new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
+    private PorterDuffXfermode mPorterDuffXfermode = new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
 
 
     private int mInsideRingColor = 0xff1c1e2e;
@@ -74,7 +75,8 @@ public class ClipPathWaveView extends View {
     //属性动画（计值器）
     private ValueAnimator mValueAnimator;
 
-    private boolean mBoolean;
+    private Canvas mCanvas;
+    private Bitmap mBg;
 
     public ClipPathWaveView(Context context) {
         this(context, null);
@@ -99,7 +101,7 @@ public class ClipPathWaveView extends View {
     private void init(Context context, AttributeSet attrs) {
 
         //关闭硬件加速
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+//        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         mValueAnimator = ValueAnimator.ofFloat(0f, 1f);
         mValueAnimator.setDuration(3000);
         mValueAnimator.setRepeatCount(ValueAnimator.INFINITE);
@@ -119,6 +121,7 @@ public class ClipPathWaveView extends View {
                 }
             }
         });
+
 
 
         mCenterCircleBackgroundBitmap = BitmapFactory.decodeResource(getResources(),
@@ -141,6 +144,22 @@ public class ClipPathWaveView extends View {
 
 //        setBackground(context.getDrawable(R.drawable.a_wave_bg));
 
+        mCanvas = new Canvas();
+
+        setOnClickListener(new OnClickListener() {
+            int i = 0;
+            PorterDuff.Mode[] mode = PorterDuff.Mode.values();
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick: " + mode[i]);
+                mPorterDuffXfermode = new PorterDuffXfermode(mode[i]);
+                if ((i++ == mode.length)) {
+                    i = 0;
+                }
+                invalidate();
+            }
+        });
+
     }
 
     @Override
@@ -155,6 +174,10 @@ public class ClipPathWaveView extends View {
 
         mContentWidth = getWidth();
         mContentHeight = getHeight();
+        if (mBg == null) {
+            mBg = Bitmap.createBitmap((int) mContentWidth, (int) mContentHeight, Bitmap.Config.ARGB_8888);
+        }
+        mCanvas.setBitmap(mBg);
 
         mCenterCircleLeft = mContentWidth / 2 - mCenterCircleWidth / 2;
         mCenterCircleRight = mContentWidth / 2 + mCenterCircleWidth / 2;
@@ -198,27 +221,32 @@ public class ClipPathWaveView extends View {
         //自动闭合补出左边的直线
         path.close();
 
-        int c = canvas.saveLayer(0, 0, mContentWidth, mContentHeight, mPaint, Canvas.ALL_SAVE_FLAG);
-//        canvas.drawBitmap(mCenterCircleBackgroundBitmap, mCenterCircleLeft, mCenterCircleTop, mPaint);
+//        int c = canvas.saveLayer(0, 0, mContentWidth, mContentHeight, mPaint, Canvas.ALL_SAVE_FLAG);
 
-//        mPaint.setXfermode(mPorterDuffXfermode);
-//        //画波浪(dst目标像素)
+        mPaint.setFilterBitmap(true);
+        mCanvas.drawBitmap(mCenterCircleBackgroundBitmap, mCenterCircleLeft, mCenterCircleTop, mPaint);
+
+        mPaint.setXfermode(mPorterDuffXfermode);
+
+
 
 
         mCenterCircleBoundPath.addCircle(mContentWidth / 2, mContentHeight / 2, mCenterCircleWidth / 2, Path.Direction.CW);
-        canvas.clipPath(mCenterCircleBoundPath);
+//        canvas.clipPath(mCenterCircleBoundPath);
 
 
 
 
         mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(10);
         mPaint.setColor(mWaveSurfaceColor);
-        canvas.drawPath(mPathWaveSurface, mPaint);
+        mCanvas.drawPath(mPathWaveSurface, mPaint);
 
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(mWaveFillColor);
-        canvas.drawPath(path, mPaint);
-//        mPaint.setXfermode(null);
+        mCanvas.drawPath(path, mPaint);
+        mPaint.setXfermode(null);
+        canvas.drawBitmap(mBg, 0, 0, null);
 //        canvas.restoreToCount(c);
     }
 
